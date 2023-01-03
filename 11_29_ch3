@@ -1,0 +1,184 @@
+# Ch 3
+
+## Macro
+
+- 작성 형식
+
+```sass
+%MACRO <macro-name>;
+macro-text
+%MEND <macro-name>;
+```
+
+- 매크로 정의 내리기
+
+```sass
+options mcompilenote = all;
+%macro time;
+	%put The current time is %sysfunc //%sysfunc는 내장 함수를 쓰겠다는 뜻
+		(time(), timeampm.).;
+%mend time;
+```
+
+### catalog
+
+- 매크로에 대한 설명
+
+```sass
+proc catalog cat = work.sasmacr;
+	contents;
+	title "My Temporary Macros";
+quit;
+```
+
+- macro call
+
+```sass
+%time
+```
+
+21   %time
+The current time is  3:21:11 PM.
+
+### Simple macro
+
+```sass
+%macro calc;
+	proc means data  = orion.order_item &stats;
+		var &vars;
+	run;
+%mend calc;
+```
+
+### let
+
+- 변수 넣기
+
+```sass
+%let stats = mean;
+%let vars = Total_Retail_Price;
+%calc
+```
+
+### 테이블 불러오기
+
+### proc means : 요약통계량
+
+```sass
+**%macro calc;
+	proc means data  = orion.&dataset &stats;
+		var &vars;
+	run;
+%mend calc;
+
+%let dataset = discount;
+%let stats = mean std n;
+%let vars = Unit_Sales_Price ;
+
+options mprint;
+%calc**
+```
+
+**MEANS 프로시저**
+
+| 분석 변수: Unit_Sales_Price Discount Retail Sales Price per Unit |  |  |
+| --- | --- | --- |
+| 평균 | 표준편차 | N |
+| 46.3974605 | 61.3215601 | 697 |
+- 한번에 쓰기
+
+```sass
+%macro calc(stats, vars);
+	proc means data = orion.order_item &stats;
+		var &vars;
+	run;
+%mend calc;
+
+%calc(min max, quantity)
+```
+
+**MEANS 프로시저**
+
+| 분석 변수: Quantity Quantity Ordered |  |
+| --- | --- |
+| 최솟값 | 최댓값 |
+| 1.0000000 | 6.0000000 |
+
+### proc freq : 빈도
+
+```sass
+%macro count(opts, start, stop);
+	proc freq data = orion.orders;
+		where order_date between
+			"&start"d and "&stop"d;
+		table order_type / &opts;
+		title1 "Orders from &start to &stop";
+	run;
+%mend count;
+
+options mprint;
+%count(nocum, 01jan2004, 31dec2010)
+
+%count(, 01jul2004, 31dec2010)
+```
+
+### nocum : 누적 값 x
+
+```sass
+%macro count(opts = , start =01jan04, stop=31dec10);
+	proc freq data = orion.orders;
+		where order_date between
+			"&start"d and "&stop"d;
+		table order_type / &opts;
+		title1 "Orders from &start to &stop";
+	run;
+%mend count;
+options mprint;
+%count(opts =nocum)
+%count(stop = 01jul10,opts = nocum nopercent)
+```
+
+```sass
+%macro count(opts , start =01jan04, stop=31dec10);
+	proc freq data = orion.orders;
+		where order_date between
+			"&start"d and "&stop"d;
+		table order_type / &opts;
+		title1 "Orders from &start to &stop";
+	run;
+%mend count;
+options mprint;
+%count(nocum)
+%count(stop = 01jun10,start = 01apr04)
+%count(nocum nopercent, stop=30jun10)
+%count()
+```
+
+- 그동안 만든 매크로 확인하기
+
+```sass
+proc catalog cat = work.sasmacr;
+	contents;
+	title "My Temporary Macros";
+quit;
+```
+
+- 매크로 저장
+
+```sass
+options mstored sasmstore = orion;
+%macro calc / store;
+ 	proc means data = orion.order_item & stats;
+		var &vars;
+	run;
+%mend calc;
+```
+
+- 외부에 매크로 저장 및 불러오기
+
+```sass
+//새로운 실행창에 원하는 매크로 입력후 외부에 저장
+
+%include "C:\Users\user\Desktop\중세\count.sas";
+%count()
+```
